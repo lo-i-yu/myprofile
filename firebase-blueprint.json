@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A portfolio project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "image": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "achievement": { "type": "string" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "tags", "image", "features", "createdAt"]
+    },
+    "ContactMessage": {
+      "title": "Contact Message",
+      "description": "A message submitted through the contact form",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Stores portfolio projects"
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Stores contact messages from visitors"
+    },
+    "/portfolio_data/{docId}": {
+      "schema": { "type": "object" },
+      "description": "Stores static content for projects, skills, and achievements (managed manually or via admin console)"
+    }
+  }
+}

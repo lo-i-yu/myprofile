@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { collection, addDoc, serverTimestamp, getDocs, orderBy, query, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { db, auth, handleFirestoreError } from "./lib/firebase";
 import { 
   User, 
   Code, 
@@ -47,7 +50,7 @@ interface Skill {
 }
 
 // --- Data (Example - User should replace with their real data) ---
-const PROJECTS: Project[] = [
+const DEFAULT_PROJECTS: Project[] = [
   {
     id: "1",
     title: "智能學習助理 (Smart Study Assistant)",
@@ -145,7 +148,202 @@ const SectionHeading = ({ children, icon: Icon, id }: { children: React.ReactNod
   </motion.div>
 );
 
+const ContactForm = () => {
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("submitting");
+    try {
+      await addDoc(collection(db, "messages"), {
+        ...formData,
+        createdAt: serverTimestamp()
+      });
+      setStatus("success");
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error) {
+      console.error(error);
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto w-full text-left bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/20">
+      {status === "success" ? (
+        <div className="text-center py-10">
+          <h4 className="text-2xl font-bold mb-2">謝謝你的訊息！</h4>
+          <p className="text-blue-100">我將會盡快與您聯繫。</p>
+          <button onClick={() => setStatus("idle")} className="mt-6 text-sm underline text-blue-200">再傳一則</button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-blue-100">你的名字</label>
+            <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-white/50 text-white placeholder-white/30 transition-colors" placeholder="王小明" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-blue-100">電子信箱</label>
+            <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-white/50 text-white placeholder-white/30 transition-colors" placeholder="example@email.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-blue-100">訊息內容</label>
+            <textarea required rows={4} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-white/50 text-white placeholder-white/30 transition-colors resize-none" placeholder="我想更進一步了解你的專案..."></textarea>
+          </div>
+          <button disabled={status === "submitting"} type="submit" className="w-full py-4 bg-white text-blue-900 rounded-xl font-bold hover:bg-blue-50 transition-colors disabled:opacity-50">
+            {status === "submitting" ? "傳送中..." : "送出訊息"}
+          </button>
+          {status === "error" && <p className="text-red-300 text-sm mt-2">發生錯誤，請稍後再試。</p>}
+        </form>
+      )}
+    </div>
+  );
+};
+
+const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
+  const handleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (user) {
+    if (user.email !== 'lou0972875947@gmail.com') {
+       return <span className="text-red-500 text-xs">非管理員帳號</span>;
+    }
+    return (
+      <button onClick={() => signOut(auth)} className="text-xs text-blue-500 underline">
+        登出管理員
+      </button>
+    );
+  }
+
+  return (
+    <button onClick={handleLogin} className="text-xs text-slate-300 hover:text-slate-500 transition-colors">
+      Admin Login
+    </button>
+  );
+}
+
+const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
+  const [formData, setFormData] = useState({
+    title: "", description: "", image: "", link: "", achievement: "", tags: "", features: ""
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, "projects"), {
+        title: formData.title,
+        description: formData.description,
+        image: formData.image || "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=800&auto=format&fit=crop",
+        link: formData.link || "",
+        achievement: formData.achievement || "",
+        tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean),
+        features: formData.features.split("\n").map(f => f.trim()).filter(Boolean),
+        createdAt: serverTimestamp()
+      });
+      onClose();
+    } catch (error) {
+       handleFirestoreError(error, 'create' as any, 'projects');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 className="text-2xl font-bold mb-6">新增作品專案</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">作品名稱</label>
+            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">作品簡介</label>
+            <textarea required rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2 border rounded-xl resize-none"></textarea>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">標籤 (用逗號分隔)</label>
+            <input required type="text" value={formData.tags} placeholder="React, TypeScript, CSS" onChange={e => setFormData({...formData, tags: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">圖片網址</label>
+            <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">作品連結 (選填)</label>
+            <input type="text" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">成就/獎項 (選填)</label>
+            <input type="text" value={formData.achievement} onChange={e => setFormData({...formData, achievement: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">核心技術亮點 (每行一個)</label>
+            <textarea required rows={4} value={formData.features} onChange={e => setFormData({...formData, features: e.target.value})} className="w-full px-4 py-2 border rounded-xl resize-none"></textarea>
+          </div>
+          
+          <div className="flex gap-4 pt-4 mt-4 border-t">
+            <button type="button" onClick={onClose} className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50">取消</button>
+            <button disabled={submitting} type="submit" className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              {submitting ? "新增中..." : "新增作品"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
+  const [showAddProject, setShowAddProject] = useState(false);
+  const isAdmin = user?.email === 'lou0972875947@gmail.com';
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const fetchedProjects = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Project[];
+        setProjects(fetchedProjects);
+      } else {
+        setProjects(DEFAULT_PROJECTS);
+      }
+    }, (error) => {
+      // It will throw permission denied if projects are only readable by someone, but their rule is read: if true
+      console.error(error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!window.confirm("確定要刪除這個作品嗎？")) return;
+    try {
+      await deleteDoc(doc(db, "projects", projectId));
+    } catch (error) {
+       handleFirestoreError(error, 'delete' as any, 'projects');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 scroll-smooth">
       {/* Navigation */}
@@ -366,17 +564,31 @@ export default function App() {
         </section>
 
         {/* Works Section */}
-        <section className="py-32">
+        <section className="py-32 relative">
           <SectionHeading icon={Briefcase} id="works">作品特色介紹 (Portfolio Showcase)</SectionHeading>
-          <div className="grid lg:grid-cols-3 gap-10">
-            {PROJECTS.map((project) => (
+          
+          {isAdmin && (
+            <div className="absolute top-32 right-0">
+               <button onClick={() => setShowAddProject(true)} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                 <span className="text-lg">+</span> 新增作品專案
+               </button>
+            </div>
+          )}
+
+          <div className="grid lg:grid-cols-3 gap-10 mt-8">
+            {projects.map((project) => (
               <motion.div 
                 key={project.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex flex-col bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group"
+                className="flex flex-col bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group relative"
               >
+                {isAdmin && (
+                  <button onClick={() => handleDeleteProject(project.id)} className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md">
+                    ✕
+                  </button>
+                )}
                 <div className="aspect-[16/10] relative overflow-hidden">
                   <img 
                     src={project.image} 
@@ -447,25 +659,29 @@ export default function App() {
               我正在尋找大學階段的學術指導與實習機會。如果您對我的背景感興趣，或是想要更深入了解我的作品與專題，請隨時與我聯繫。
             </p>
             
-            <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-              <a href="mailto:example@email.com" className="group px-12 py-5 bg-white text-blue-900 rounded-[2rem] font-black text-lg hover:shadow-2xl hover:shadow-white/20 transition-all flex items-center gap-3">
-                <Mail size={24} className="group-hover:scale-110 transition-transform" /> 寄信給我
-              </a>
+            <div className="flex flex-col md:flex-row justify-center items-start gap-12">
+              <div className="flex-1 space-y-8 flex items-center justify-center pt-8">
+                <div className="flex flex-col gap-6">
+                  {[
+                    { icon: Github, label: 'GitHub', href: '#' },
+                    { icon: Linkedin, label: 'LinkedIn', href: '#' },
+                    { icon: Mail, label: 'Email', href: 'mailto:example@email.com' }
+                  ].map(social => (
+                    <a 
+                      key={social.label}
+                      href={social.href}
+                      className="px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center gap-4 hover:bg-white/20 transition-all group"
+                      title={social.label}
+                    >
+                      <social.icon size={28} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-lg font-bold tracking-wide">{social.label}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
               
-              <div className="flex gap-6">
-                {[
-                  { icon: Github, label: 'GitHub', href: '#' },
-                  { icon: Linkedin, label: 'LinkedIn', href: '#' },
-                ].map(social => (
-                  <a 
-                    key={social.label}
-                    href={social.href}
-                    className="w-16 h-16 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center hover:bg-white/20 transition-all group"
-                    title={social.label}
-                  >
-                    <social.icon size={24} className="group-hover:scale-110 transition-transform" />
-                  </a>
-                ))}
+              <div className="flex-1 w-full relative z-10">
+                <ContactForm />
               </div>
             </div>
           </div>
@@ -478,13 +694,16 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-center md:text-left">
             <span className="text-xl font-black bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent block mb-2">Wang Xiao-Ming</span>
-            <p className="text-slate-400 text-sm font-medium">© 2024 Personal Showcase. All rights reserved.</p>
+            <p className="text-slate-400 text-sm font-medium mb-2">© 2024 Personal Showcase. All rights reserved.</p>
+            <AdminLogin user={user} />
           </div>
           <p className="text-slate-300 text-xs font-mono max-w-xs text-center md:text-right">
             Designed for University Admission Portfolio. Developed with React & Tailwind CSS.
           </p>
         </div>
       </footer>
+
+      {showAddProject && <AddProjectForm onClose={() => setShowAddProject(false)} />}
     </div>
   );
 }
