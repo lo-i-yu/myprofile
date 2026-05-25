@@ -211,8 +211,9 @@ const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Login Error:", e);
+      alert(`登入發生錯誤：${e.message}\n\n可能原因：\n1. 若您在預覽視窗內操作，請點擊右上角「在新分頁中開啟」。\n2. 您的應用程式網址未加入 Firebase Console 的 Authorized domains (授權網域) 中。\n請至 Firebase 後台 -> Authentication -> Settings -> Authorized domains 加入此網址。`);
     }
   };
 
