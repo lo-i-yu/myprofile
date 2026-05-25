@@ -201,6 +201,11 @@ const SectionHeading = ({
   </motion.div>
 );
 
+const ADMIN_EMAILS = ["lou0972875947@gmail.com", "fish20080901@gmail.com"];
+const checkIsAdmin = (user: FirebaseUser | null) => {
+  return user?.email ? ADMIN_EMAILS.includes(user.email) : false;
+};
+
 const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
   const handleLogin = async () => {
     try {
@@ -212,7 +217,7 @@ const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
   };
 
   if (user) {
-    if (user.email !== "lou0972875947@gmail.com") {
+    if (!checkIsAdmin(user)) {
       return (
         <div className="flex items-center justify-center gap-2">
           <span className="text-red-500 text-xs">非管理員帳號</span>
@@ -1026,8 +1031,7 @@ export default function App() {
   const [showEditSkills, setShowEditSkills] = useState(false);
   const [showEditAchievements, setShowEditAchievements] = useState(false);
   const [showEditFooter, setShowEditFooter] = useState(false);
-  const ADMIN_EMAILS = ["lou0972875947@gmail.com"];
-  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
+  const isAdmin = checkIsAdmin(user);
 
   useEffect(() => {
     const docRef = doc(db, "portfolio_data", "main");
