@@ -1019,6 +1019,7 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [content, setContent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showAddProject, setShowAddProject] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showEditAbout, setShowEditAbout] = useState(false);
@@ -1038,9 +1039,11 @@ export default function App() {
         } else {
           setContent({});
         }
+        setLoading(false);
       },
       (error) => {
         console.error(error);
+        setLoading(false);
       },
     );
     return () => unsubscribe();
@@ -1101,6 +1104,18 @@ export default function App() {
       handleFirestoreError(error, OperationType.DELETE, "projects");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="w-12 h-12 border-4 border-stone-300 border-t-stone-800 rounded-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-stone-200 scroll-smooth">
