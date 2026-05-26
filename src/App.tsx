@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import {
   collection,
@@ -31,6 +31,7 @@ import {
   Linkedin,
   Award,
   ChevronRight,
+  ChevronLeft,
   Monitor,
   Database,
   Layout,
@@ -1320,7 +1321,18 @@ export default function App() {
   const [showEditProjectsOrder, setShowEditProjectsOrder] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const projectsScrollRef = useRef<HTMLDivElement>(null);
   const isAdmin = checkIsAdmin(user);
+
+  const scrollProjects = (direction: "left" | "right") => {
+    if (projectsScrollRef.current) {
+      const scrollAmount = window.innerWidth > 768 ? 600 : 300;
+      projectsScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   useEffect(() => {
     const docRef = doc(db, "portfolio_data", "main");
@@ -1823,78 +1835,96 @@ export default function App() {
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-10 mt-12">
-            {filteredProjects.map((project) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="flex flex-col bg-white overflow-hidden shadow-xs hover:shadow-2xl transition-all duration-700 group relative border border-stone-200"
-              >
-                {isAdmin && (
-                  <button
-                    onClick={() => handleDeleteProject(project.id)}
-                    className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
-                  >
-                    ✕
-                  </button>
-                )}
-                <div className="aspect-[14/10] relative overflow-hidden bg-stone-100">
-                  <img
-                    src={getDirectImageUrl(project.image)}
-                    alt={project.title}
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 filter grayscale-[50%] hover:grayscale-0"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+          <div className="relative mt-16 group/slider -mx-6 px-6 md:mx-0 md:px-0">
+            <button
+              onClick={() => scrollProjects("left")}
+              className="absolute left-2 md:-left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 backdrop-blur border border-stone-200 shadow-xl flex items-center justify-center text-stone-600 hover:text-stone-900 md:opacity-0 md:group-hover/slider:opacity-100 transition-all md:-translate-x-6 md:group-hover/slider:translate-x-0"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={() => scrollProjects("right")}
+              className="absolute right-2 md:-right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 backdrop-blur border border-stone-200 shadow-xl flex items-center justify-center text-stone-600 hover:text-stone-900 md:opacity-0 md:group-hover/slider:opacity-100 transition-all md:translate-x-6 md:group-hover/slider:translate-x-0"
+            >
+              <ChevronRight size={24} />
+            </button>
 
-                <div className="p-10 flex-1 flex flex-col items-center text-center bg-white border-t border-stone-200">
-                  <div className="flex gap-2 flex-wrap justify-center mb-6">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-stone-400 text-[10px] font-mono uppercase tracking-widest"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <h3 className="text-2xl font-serif font-black mb-6 text-stone-900 tracking-widest">
-                    {project.title}
-                  </h3>
-                  <p className="text-stone-500 text-sm mb-10 leading-relaxed font-serif">
-                    {project.description}
-                  </p>
-
-                  <div className="mt-auto space-y-8 w-full">
-                    {project.achievement && (
-                      <div className="py-3 border-y border-stone-200 flex items-center justify-center gap-3">
-                        <Sparkles
-                          size={14}
-                          className="text-stone-400 shrink-0"
-                        />
-                        <p className="text-xs font-mono tracking-widest text-stone-600 uppercase">
-                          {project.achievement}
-                        </p>
-                      </div>
-                    )}
-
+            <div
+              ref={projectsScrollRef}
+              className="flex gap-6 md:gap-10 overflow-x-auto snap-x snap-mandatory pb-12 pt-4 px-2 md:px-4 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+              {filteredProjects.map((project) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="w-[85vw] md:w-[45vw] lg:w-[350px] shrink-0 snap-center md:snap-start flex flex-col bg-white overflow-hidden shadow-xs hover:shadow-2xl transition-all duration-700 group relative border border-stone-200"
+                >
+                  {isAdmin && (
                     <button
-                      onClick={() => setSelectedProject(project)}
-                      className="inline-flex items-center justify-center gap-3 py-4 w-full bg-stone-900 text-white font-mono text-xs tracking-[0.2em] uppercase hover:bg-stone-800 transition-colors group/btn cursor-pointer"
+                      onClick={() => handleDeleteProject(project.id)}
+                      className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
                     >
-                      View Details{" "}
-                      <ExternalLink
-                        size={14}
-                        className="transition-transform group-hover/btn:translate-x-1"
-                        strokeWidth={1.5}
-                      />
+                      ✕
                     </button>
+                  )}
+                  <div className="aspect-[14/10] relative overflow-hidden bg-stone-100">
+                    <img
+                      src={getDirectImageUrl(project.image)}
+                      alt={project.title}
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 filter grayscale-[50%] hover:grayscale-0"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
-                </div>
-              </motion.div>
-            ))}
+
+                  <div className="p-10 flex-1 flex flex-col items-center text-center bg-white border-t border-stone-200">
+                    <div className="flex gap-2 flex-wrap justify-center mb-6">
+                      {project.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-stone-400 text-[10px] font-mono uppercase tracking-widest"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <h3 className="text-2xl font-serif font-black mb-6 text-stone-900 tracking-widest">
+                      {project.title}
+                    </h3>
+                    <p className="text-stone-500 text-sm mb-10 leading-relaxed font-serif">
+                      {project.description}
+                    </p>
+
+                    <div className="mt-auto space-y-8 w-full">
+                      {project.achievement && (
+                        <div className="py-3 border-y border-stone-200 flex items-center justify-center gap-3">
+                          <Sparkles
+                            size={14}
+                            className="text-stone-400 shrink-0"
+                          />
+                          <p className="text-xs font-mono tracking-widest text-stone-600 uppercase">
+                            {project.achievement}
+                          </p>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => setSelectedProject(project)}
+                        className="inline-flex items-center justify-center gap-3 py-4 w-full bg-stone-900 text-white font-mono text-xs tracking-[0.2em] uppercase hover:bg-stone-800 transition-colors group/btn cursor-pointer"
+                      >
+                        View Details{" "}
+                        <ExternalLink
+                          size={14}
+                          className="transition-transform group-hover/btn:translate-x-1"
+                          strokeWidth={1.5}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </section>
       </main>
