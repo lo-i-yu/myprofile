@@ -38,7 +38,15 @@ import {
   GraduationCap,
   Sparkles,
   X,
+  GripVertical,
 } from "lucide-react";
+
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 
 // --- Utilities ---
 const getDirectImageUrl = (url: string) => {
@@ -213,7 +221,9 @@ const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
       await signInWithPopup(auth, provider);
     } catch (e: any) {
       console.error("Login Error:", e);
-      alert(`登入發生錯誤：${e.message}\n\n可能原因：\n1. 若您在預覽視窗內操作，請點擊右上角「在新分頁中開啟」。\n2. 您的應用程式網址未加入 Firebase Console 的 Authorized domains (授權網域) 中。\n請至 Firebase 後台 -> Authentication -> Settings -> Authorized domains 加入此網址。`);
+      alert(
+        `登入發生錯誤：${e.message}\n\n可能原因：\n1. 若您在預覽視窗內操作，請點擊右上角「在新分頁中開啟」。\n2. 您的應用程式網址未加入 Firebase Console 的 Authorized domains (授權網域) 中。\n請至 Firebase 後台 -> Authentication -> Settings -> Authorized domains 加入此網址。`,
+      );
     }
   };
 
@@ -765,10 +775,18 @@ const EditSkillsModal = ({
     setSubmitting(false);
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newItems = Array.from(items);
+    const [reorderedItem] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, reorderedItem);
+    setItems(newItems);
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center mb-6 shrink-0">
           <h3 className="text-2xl font-bold">編輯專業專長</h3>
           <div className="flex items-center gap-4">
             <button
@@ -790,75 +808,101 @@ const EditSkillsModal = ({
             </button>
           </div>
         </div>
-        <div className="space-y-4">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border"
-            >
-              <input
-                type="text"
-                value={item.name}
-                placeholder="技能名稱"
-                onChange={(e) => {
-                  const newItems = [...items];
-                  newItems[idx].name = e.target.value;
-                  setItems(newItems);
-                }}
-                className="flex-1 px-3 py-2 border rounded-lg"
-              />
-              <input
-                type="number"
-                min="1"
-                max="5"
-                value={item.level}
-                onChange={(e) => {
-                  const newItems = [...items];
-                  newItems[idx].level = Number(e.target.value);
-                  setItems(newItems);
-                }}
-                className="w-20 px-3 py-2 border rounded-lg"
-              />
-              <select
-                value={item.category}
-                onChange={(e) => {
-                  const newItems = [...items];
-                  newItems[idx].category = e.target.value as any;
-                  setItems(newItems);
-                }}
-                className="w-32 px-3 py-2 border rounded-lg bg-white"
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="skills">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="space-y-4 overflow-y-auto flex-1 pr-2"
               >
-                <option value="Graphic">平面設計</option>
-                <option value="UXUI">UI/UX</option>
-                <option value="Media">影音剪輯</option>
-                <option value="Other">其他</option>
-              </select>
-              <button
-                onClick={() => {
-                  const newItems = items.filter((_, i) => i !== idx);
-                  setItems(newItems);
-                }}
-                className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold"
-              >
-                刪除
-              </button>
-            </div>
-          ))}
-          <div className="flex gap-4 pt-4 mt-4 border-t sticky bottom-0 bg-white">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
-            >
-              取消
-            </button>
-            <button
-              disabled={submitting}
-              onClick={handleSave}
-              className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              儲存
-            </button>
-          </div>
+                {items.map((item, idx) => (
+                  <Draggable
+                    key={item.name + idx}
+                    draggableId={`skill-${idx}`}
+                    index={idx}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border"
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <GripVertical size={20} />
+                        </div>
+                        <input
+                          type="text"
+                          value={item.name}
+                          placeholder="技能名稱"
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[idx].name = e.target.value;
+                            setItems(newItems);
+                          }}
+                          className="flex-1 px-3 py-2 border rounded-lg"
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          max="5"
+                          value={item.level}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[idx].level = Number(e.target.value);
+                            setItems(newItems);
+                          }}
+                          className="w-20 px-3 py-2 border rounded-lg"
+                        />
+                        <select
+                          value={item.category}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[idx].category = e.target.value as any;
+                            setItems(newItems);
+                          }}
+                          className="w-32 px-3 py-2 border rounded-lg bg-white"
+                        >
+                          <option value="Graphic">平面設計</option>
+                          <option value="UXUI">UI/UX</option>
+                          <option value="Media">影音剪輯</option>
+                          <option value="Other">其他</option>
+                        </select>
+                        <button
+                          onClick={() => {
+                            const newItems = items.filter((_, i) => i !== idx);
+                            setItems(newItems);
+                          }}
+                          className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold shrink-0"
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+        <div className="flex gap-4 pt-4 mt-4 border-t sticky bottom-0 bg-white shrink-0">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
+          >
+            取消
+          </button>
+          <button
+            disabled={submitting}
+            onClick={handleSave}
+            className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            儲存
+          </button>
         </div>
       </div>
     </div>
@@ -890,10 +934,18 @@ const EditAchievementsModal = ({
     setSubmitting(false);
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newItems = Array.from(items);
+    const [reorderedItem] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, reorderedItem);
+    setItems(newItems);
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center mb-6 shrink-0">
           <h3 className="text-2xl font-bold">編輯課程與成就</h3>
           <div className="flex items-center gap-4">
             <button
@@ -922,101 +974,334 @@ const EditAchievementsModal = ({
             </button>
           </div>
         </div>
-        <div className="space-y-6">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col gap-3 bg-slate-50 p-4 rounded-xl border"
-            >
-              <div className="flex gap-4 text-sm font-medium">
-                <input
-                  type="text"
-                  value={item.title}
-                  placeholder="標題"
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].title = e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="flex-1 px-3 py-2 border rounded-lg"
-                />
-                <input
-                  type="text"
-                  value={item.organization}
-                  placeholder="組織/頒發單位"
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].organization = e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="flex-1 px-3 py-2 border rounded-lg"
-                />
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="achievements">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="space-y-6 overflow-y-auto flex-1 pr-2"
+              >
+                {items.map((item, idx) => (
+                  <Draggable
+                    key={item.id || String(idx)}
+                    draggableId={item.id || String(idx)}
+                    index={idx}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="flex flex-col gap-3 bg-slate-50 p-4 rounded-xl border relative"
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-grab px-2"
+                        >
+                          <GripVertical size={20} />
+                        </div>
+                        <div className="flex gap-4 text-sm font-medium pl-8">
+                          <input
+                            type="text"
+                            value={item.title}
+                            placeholder="標題"
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].title = e.target.value;
+                              setItems(newItems);
+                            }}
+                            className="flex-1 px-3 py-2 border rounded-lg"
+                          />
+                          <input
+                            type="text"
+                            value={item.organization}
+                            placeholder="組織/頒發單位"
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].organization = e.target.value;
+                              setItems(newItems);
+                            }}
+                            className="flex-1 px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+                        <div className="flex gap-4 text-sm font-medium pl-8">
+                          <input
+                            type="text"
+                            value={item.date}
+                            placeholder="年份/日期"
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].date = e.target.value;
+                              setItems(newItems);
+                            }}
+                            className="w-32 px-3 py-2 border rounded-lg"
+                          />
+                          <select
+                            value={item.type}
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].type = e.target.value as any;
+                              setItems(newItems);
+                            }}
+                            className="w-32 px-3 py-2 border rounded-lg bg-white"
+                          >
+                            <option value="Award">獎項</option>
+                            <option value="Course">課程</option>
+                            <option value="Certificate">證照</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={item.description}
+                            placeholder="描述文字..."
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].description = e.target.value;
+                              setItems(newItems);
+                            }}
+                            className="flex-1 px-3 py-2 border rounded-lg"
+                          />
+                          <button
+                            onClick={() => {
+                              const newItems = items.filter(
+                                (_, i) => i !== idx,
+                              );
+                              setItems(newItems);
+                            }}
+                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold shrink-0"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
-              <div className="flex gap-4 text-sm font-medium">
-                <input
-                  type="text"
-                  value={item.date}
-                  placeholder="年份/日期"
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].date = e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="w-32 px-3 py-2 border rounded-lg"
-                />
-                <select
-                  value={item.type}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].type = e.target.value as any;
-                    setItems(newItems);
-                  }}
-                  className="w-32 px-3 py-2 border rounded-lg bg-white"
-                >
-                  <option value="Award">獎項</option>
-                  <option value="Course">課程</option>
-                  <option value="Certificate">證照</option>
-                </select>
-                <input
-                  type="text"
-                  value={item.description}
-                  placeholder="描述文字..."
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].description = e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="flex-1 px-3 py-2 border rounded-lg"
-                />
-                <button
-                  onClick={() => {
-                    const newItems = items.filter((_, i) => i !== idx);
-                    setItems(newItems);
-                  }}
-                  className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold"
-                >
-                  刪除
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="flex gap-4 pt-4 mt-4 border-t sticky bottom-0 bg-white">
-            <button
-              onClick={onClose}
-              className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
-            >
-              取消
-            </button>
-            <button
-              disabled={submitting}
-              onClick={handleSave}
-              className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              儲存
-            </button>
-          </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+        <div className="flex gap-4 pt-4 mt-4 border-t sticky bottom-0 bg-white shrink-0">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
+          >
+            取消
+          </button>
+          <button
+            disabled={submitting}
+            onClick={handleSave}
+            className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            儲存
+          </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+const EditProjectsOrderModal = ({
+  data,
+  onClose,
+}: {
+  data: Project[];
+  onClose: () => void;
+}) => {
+  const [items, setItems] = useState<Project[]>(data);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    setSubmitting(true);
+    try {
+      const order = items.map((p) => p.id);
+      await setDoc(
+        doc(db, "portfolio_data", "main"),
+        { projectOrder: order },
+        { merge: true },
+      );
+      onClose();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, "portfolio_data");
+    }
+    setSubmitting(false);
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newItems = Array.from(items);
+    const [reorderedItem] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, reorderedItem);
+    setItems(newItems);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center mb-6 shrink-0">
+          <h3 className="text-2xl font-bold">編輯作品順序</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="projects">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="space-y-3 overflow-y-auto flex-1 pr-2"
+              >
+                {items.map((item, idx) => (
+                  <Draggable key={item.id} draggableId={item.id} index={idx}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="flex gap-4 items-center bg-slate-50 p-4 rounded-xl border relative"
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="text-slate-400 hover:text-slate-600 cursor-grab px-2 shrink-0"
+                        >
+                          <GripVertical size={20} />
+                        </div>
+                        <img
+                          src={getDirectImageUrl(item.image)}
+                          className="w-16 h-12 object-cover rounded-md"
+                          referrerPolicy="no-referrer"
+                        />
+                        <span className="font-bold flex-1 truncate">
+                          {item.title}
+                        </span>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+        <div className="flex gap-4 pt-4 mt-4 border-t sticky bottom-0 bg-white shrink-0">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
+          >
+            取消
+          </button>
+          <button
+            disabled={submitting}
+            onClick={handleSave}
+            className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            儲存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProjectDetailsModal = ({
+  project,
+  onClose,
+}: {
+  project: Project;
+  onClose: () => void;
+}) => {
+  if (!project) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-stone-900/80 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white max-w-5xl w-full max-h-[90vh] overflow-y-auto rounded-none shadow-2xl relative flex flex-col md:flex-row"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center bg-white/80 backdrop-blur-md hover:bg-white transition-colors"
+        >
+          <X size={24} className="text-stone-900" />
+        </button>
+
+        <div className="md:w-1/2 min-h-[300px] md:min-h-full relative bg-stone-100 flex-shrink-0">
+          <img
+            src={getDirectImageUrl(project.image)}
+            alt={project.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        <div className="md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col">
+          <div className="flex gap-2 flex-wrap mb-6">
+            {project.tags?.map((tag) => (
+              <span
+                key={tag}
+                className="text-stone-400 text-[10px] font-mono uppercase tracking-widest border border-stone-200 px-3 py-1"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <h3 className="text-3xl md:text-4xl font-serif font-black mb-6 text-stone-900 tracking-widest">
+            {project.title}
+          </h3>
+
+          <p className="text-stone-600 text-sm md:text-base mb-10 leading-loose mx-0">
+            {project.description}
+          </p>
+
+          {project.features && project.features.length > 0 && (
+            <div className="mb-10">
+              <h4 className="text-xs font-mono uppercase tracking-[0.2em] text-stone-900 mb-6 border-b border-stone-200 pb-2 flex items-center gap-2">
+                <Sparkles size={14} /> 專案特色
+              </h4>
+              <ul className="space-y-4">
+                {project.features.map((feature, idx) => (
+                  <li
+                    key={idx}
+                    className="flex gap-4 text-stone-600 text-sm font-serif"
+                  >
+                    <span className="text-stone-300 font-mono">0{idx + 1}</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-auto pt-8 flex flex-col sm:flex-row gap-4 items-center w-full">
+            {project.link && project.link !== "#" ? (
+              <a
+                href={project.link}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 bg-stone-900 text-white font-mono text-xs tracking-[0.2em] uppercase hover:bg-stone-800 transition-colors"
+              >
+                前往專案 <ExternalLink size={16} />
+              </a>
+            ) : null}
+            {project.achievement && (
+              <div className="flex items-center gap-3 w-full py-4 text-stone-500 font-mono text-xs uppercase tracking-widest">
+                <Award size={16} className="text-stone-400" />
+                {project.achievement}
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 };
@@ -1032,6 +1317,9 @@ export default function App() {
   const [showEditSkills, setShowEditSkills] = useState(false);
   const [showEditAchievements, setShowEditAchievements] = useState(false);
   const [showEditFooter, setShowEditFooter] = useState(false);
+  const [showEditProjectsOrder, setShowEditProjectsOrder] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const isAdmin = checkIsAdmin(user);
 
   useEffect(() => {
@@ -1065,6 +1353,24 @@ export default function App() {
     ...projects,
     ...DEFAULT_PROJECTS.filter((p) => !deletedProjects.includes(p.id)),
   ];
+
+  const projectOrder = content?.projectOrder || [];
+  const sortedProjects = [...displayProjects].sort((a, b) => {
+    const aIndex = projectOrder.indexOf(a.id);
+    const bIndex = projectOrder.indexOf(b.id);
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+
+  const allTags = Array.from(
+    new Set(sortedProjects.flatMap((p) => p.tags || [])),
+  ).sort();
+
+  const filteredProjects = selectedTag
+    ? sortedProjects.filter((p) => p.tags?.includes(selectedTag))
+    : sortedProjects;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -1483,7 +1789,13 @@ export default function App() {
           </SectionHeading>
 
           {isAdmin && (
-            <div className="absolute top-32 right-0">
+            <div className="absolute top-32 right-0 flex items-center gap-4 z-20">
+              <button
+                onClick={() => setShowEditProjectsOrder(true)}
+                className="px-6 py-2 bg-stone-100 text-stone-700 font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 border border-stone-200"
+              >
+                編輯順序
+              </button>
               <button
                 onClick={() => setShowAddProject(true)}
                 className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
@@ -1493,8 +1805,26 @@ export default function App() {
             </div>
           )}
 
-          <div className="grid lg:grid-cols-3 gap-10 mt-8">
-            {displayProjects.map((project) => (
+          <div className="flex flex-wrap gap-3 mt-12 justify-center max-w-4xl mx-auto z-10 relative">
+            <button
+              onClick={() => setSelectedTag(null)}
+              className={`px-4 py-2 rounded-full font-bold text-sm transition-all focus:outline-none ${!selectedTag ? "bg-stone-800 text-white shadow-md scale-105" : "bg-white text-stone-600 hover:bg-stone-100 shadow-sm border border-stone-200"}`}
+            >
+              全部作品
+            </button>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`px-4 py-2 rounded-full font-bold text-sm transition-all focus:outline-none ${selectedTag === tag ? "bg-stone-800 text-white shadow-md scale-105" : "bg-white text-stone-600 hover:bg-stone-100 shadow-sm border border-stone-200"}`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-10 mt-12">
+            {filteredProjects.map((project) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -1550,9 +1880,9 @@ export default function App() {
                       </div>
                     )}
 
-                    <a
-                      href={project.link}
-                      className="inline-flex items-center justify-center gap-3 py-4 w-full bg-stone-900 text-white font-mono text-xs tracking-[0.2em] uppercase hover:bg-stone-800 transition-colors group/btn"
+                    <button
+                      onClick={() => setSelectedProject(project)}
+                      className="inline-flex items-center justify-center gap-3 py-4 w-full bg-stone-900 text-white font-mono text-xs tracking-[0.2em] uppercase hover:bg-stone-800 transition-colors group/btn cursor-pointer"
                     >
                       View Details{" "}
                       <ExternalLink
@@ -1560,7 +1890,7 @@ export default function App() {
                         className="transition-transform group-hover/btn:translate-x-1"
                         strokeWidth={1.5}
                       />
-                    </a>
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -1595,6 +1925,18 @@ export default function App() {
 
       {showAddProject && (
         <AddProjectForm onClose={() => setShowAddProject(false)} />
+      )}
+      {showEditProjectsOrder && (
+        <EditProjectsOrderModal
+          data={sortedProjects}
+          onClose={() => setShowEditProjectsOrder(false)}
+        />
+      )}
+      {selectedProject && (
+        <ProjectDetailsModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
       )}
       {showEditProfile && (
         <EditProfileModal
