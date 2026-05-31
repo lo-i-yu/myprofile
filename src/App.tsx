@@ -1777,17 +1777,16 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
                   {allImages.map((img, idx) => (
                     <div
                       key={idx}
-                      className="border border-stone-200 p-2 bg-white w-[240px] shrink-0 snap-center shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      className="border border-stone-200 p-2 bg-white h-[200px] sm:h-[240px] shrink-0 snap-center shadow-sm hover:shadow-md transition-all group relative cursor-pointer flex items-center justify-center overflow-hidden"
                       onClick={() => setPreviewIndex(idx)}
                     >
-                      <div className="w-full aspect-[4/3] relative overflow-hidden bg-stone-50">
-                        <img
-                          src={getDirectImageUrl(img as string)}
-                          alt={`${item.title} - ${idx + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
+                      <img
+                        src={getDirectImageUrl(img as string)}
+                        alt={`${item.title} - ${idx + 1}`}
+                        className="h-full w-auto max-w-[80vw] object-contain transition-transform duration-500 group-hover:scale-105"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-stone-900/0 group-hover:bg-stone-900/5 transition-colors pointer-events-none" />
                     </div>
                   ))}
                 </div>
@@ -2069,7 +2068,7 @@ export default function App() {
             transition={{ delay: 0.5, duration: 1 }}
             className="relative lg:mt-0 flex-shrink-0"
           >
-            <div className="w-56 h-72 md:w-72 md:h-96 lg:w-[26rem] lg:h-[34rem] border-[12px] border-white shadow-2xl overflow-hidden relative group filter grayscale hover:grayscale-0 transition-all duration-700 z-20 rotate-3 hover:rotate-0">
+            <div className="w-56 h-72 md:w-72 md:h-96 lg:w-[26rem] lg:h-[34rem] border-[12px] border-white shadow-2xl overflow-hidden relative group transition-all duration-700 z-20 rotate-3 hover:rotate-0">
               <img
                 src={getDirectImageUrl(profileData.photoUrl)}
                 alt="Profile"
