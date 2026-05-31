@@ -205,14 +205,14 @@ const SectionHeading = ({
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    className="flex flex-col items-center gap-4 mb-24 scroll-mt-32"
+    className="flex flex-col items-center gap-4 mb-24 scroll-mt-32 w-full max-w-full"
   >
-    <div className="flex items-center justify-center w-12 h-12 border border-stone-300 text-stone-800 rotate-45 mb-2">
+    <div className="flex items-center justify-center w-12 h-12 border border-stone-300 text-stone-800 rotate-45 mb-2 shrink-0">
       <div className="-rotate-45">
         <Icon size={22} strokeWidth={1.5} />
       </div>
     </div>
-    <h2 className="text-3xl md:text-5xl font-serif font-black tracking-widest text-stone-900 text-center relative z-10">
+    <h2 className="text-[1.25rem] sm:text-3xl md:text-4xl lg:text-5xl font-serif font-black tracking-wider md:tracking-widest text-stone-900 text-center relative z-10 w-full px-4 whitespace-nowrap overflow-hidden text-ellipsis">
       {children}
       <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-16 h-1 bg-stone-900"></span>
     </h2>
@@ -1467,6 +1467,88 @@ const EditProjectsOrderModal = ({
   );
 };
 
+const ImagePreviewModal = ({
+  images,
+  initialIndex = 0,
+  onClose,
+}: {
+  images: string[];
+  initialIndex?: number;
+  onClose: () => void;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-stone-900/95 z-[200] flex items-center justify-center p-4 md:p-8 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors z-10"
+      >
+        <X size={24} />
+      </button>
+
+      <div
+        className="w-full max-w-6xl h-full flex items-center justify-center relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={getDirectImageUrl(images[currentIndex])}
+          alt={`Preview ${currentIndex + 1}`}
+          className="max-w-full max-h-full object-contain"
+          referrerPolicy="no-referrer"
+        />
+
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-0 md:-left-12 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-0 md:-right-12 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            <div className="absolute bottom-4 md:-bottom-8 left-0 w-full flex justify-center gap-3 z-10">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentIndex(idx);
+                  }}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === currentIndex
+                      ? "bg-white scale-125"
+                      : "bg-white/30 hover:bg-white/80"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ProjectDetailsModal = ({
   project,
   onClose,
@@ -1624,6 +1706,7 @@ const ProjectDetailsModal = ({
 
 const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   return (
     <motion.div
@@ -1694,18 +1777,26 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
                   {allImages.map((img, idx) => (
                     <div
                       key={idx}
-                      className="border border-stone-200 p-2 bg-white min-w-[280px] max-w-[400px] shrink-0 snap-center shadow-sm"
+                      className="border border-stone-200 p-2 bg-white min-w-[200px] max-w-[300px] shrink-0 snap-center shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setPreviewIndex(idx)}
                     >
                       <img
-                        src={getDirectImageUrl(img)}
+                        src={getDirectImageUrl(img as string)}
                         alt={`${item.title} - ${idx + 1}`}
-                        className="w-full h-auto object-contain"
+                        className="w-full h-auto object-contain max-h-[240px]"
                         referrerPolicy="no-referrer"
                       />
                     </div>
                   ))}
                 </div>
               </motion.div>
+              {previewIndex !== null && (
+                <ImagePreviewModal
+                  images={allImages as string[]}
+                  initialIndex={previewIndex}
+                  onClose={() => setPreviewIndex(null)}
+                />
+              )}
             </div>
           );
         })()}
@@ -2147,7 +2238,7 @@ export default function App() {
         {/* Achievements Section */}
         <section className="py-32 relative">
           <SectionHeading icon={GraduationCap} id="achievements">
-            課程與成就 (Academic & Learning)
+            獎項與證照 (Awards & Certifications)
           </SectionHeading>
           {isAdmin && (
             <div className="absolute top-32 right-0 mt-2">
