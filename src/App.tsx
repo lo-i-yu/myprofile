@@ -80,9 +80,12 @@ interface Project {
   description: string;
   tags: string[];
   image: string;
+  images?: string[];
   link?: string;
   features: string[];
   achievement?: string;
+  order?: number;
+  createdAt?: any;
 }
 
 interface Achievement {
@@ -272,6 +275,7 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
     title: "",
     description: "",
     image: "",
+    images: "",
     link: "",
     achievement: "",
     tags: "",
@@ -289,6 +293,10 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
         image:
           formData.image ||
           "https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=800&auto=format&fit=crop",
+        images: formData.images
+          .split("\n")
+          .map((i) => i.trim())
+          .filter(Boolean),
         link: formData.link || "",
         achievement: formData.achievement || "",
         tags: formData.tags
@@ -379,6 +387,19 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
+              其他圖片網址 (選填，每行一個)
+            </label>
+            <textarea
+              rows={3}
+              value={formData.images}
+              onChange={(e) =>
+                setFormData({ ...formData, images: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl resize-none"
+            ></textarea>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
               作品連結 (選填)
             </label>
             <input
@@ -443,14 +464,17 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
 const EditProjectForm = ({
   project,
   onClose,
+  onDelete,
 }: {
   project: Project;
   onClose: () => void;
+  onDelete: () => void;
 }) => {
   const [formData, setFormData] = useState({
     title: project.title || "",
     description: project.description || "",
     image: project.image || "",
+    images: (project.images || []).join("\n"),
     link: project.link || "",
     achievement: project.achievement || "",
     tags: (project.tags || []).join(", "),
@@ -469,6 +493,10 @@ const EditProjectForm = ({
           title: formData.title,
           description: formData.description,
           image: formData.image,
+          images: formData.images
+            .split("\n")
+            .map((i) => i.trim())
+            .filter(Boolean),
           link: formData.link || "",
           achievement: formData.achievement || "",
           tags: formData.tags
@@ -545,7 +573,7 @@ const EditProjectForm = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              圖片網址
+              首圖網址
               <span className="block text-xs font-normal text-slate-500 mt-0.5">
                 支援 Google 雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
               </span>
@@ -558,6 +586,19 @@ const EditProjectForm = ({
               }
               className="w-full px-4 py-2 border rounded-xl"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              其他圖片網址 (選填，每行一個)
+            </label>
+            <textarea
+              rows={3}
+              value={formData.images}
+              onChange={(e) =>
+                setFormData({ ...formData, images: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl resize-none"
+            ></textarea>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -603,6 +644,14 @@ const EditProjectForm = ({
           <div className="flex gap-4 pt-4 mt-4 border-t">
             <button
               type="button"
+              onClick={onDelete}
+              className="px-6 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-bold"
+            >
+              刪除作品
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
               onClick={onClose}
               className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
             >
@@ -611,7 +660,7 @@ const EditProjectForm = ({
             <button
               disabled={submitting}
               type="submit"
-              className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? "儲存中..." : "儲存修改"}
             </button>
@@ -1408,7 +1457,27 @@ const ProjectDetailsModal = ({
   project: Project;
   onClose: () => void;
 }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   if (!project) return null;
+
+  const allImages = [project.image, ...(project.images || [])].filter(
+    (img) => !!img,
+  );
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? allImages.length - 1 : prev - 1,
+    );
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImageIndex((prev) =>
+      prev === allImages.length - 1 ? 0 : prev + 1,
+    );
+  };
 
   return (
     <div
@@ -1429,13 +1498,48 @@ const ProjectDetailsModal = ({
           <X size={24} className="text-stone-900" />
         </button>
 
-        <div className="md:w-1/2 min-h-[300px] md:min-h-full relative bg-stone-100 flex-shrink-0">
-          <img
-            src={getDirectImageUrl(project.image)}
-            alt={project.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+        <div className="md:w-1/2 min-h-[300px] md:min-h-full relative bg-stone-100 flex-shrink-0 group">
+          {allImages.length > 0 && (
+            <img
+              src={getDirectImageUrl(allImages[currentImageIndex])}
+              alt={`${project.title} - ${currentImageIndex + 1}`}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              referrerPolicy="no-referrer"
+            />
+          )}
+
+          {allImages.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white/80 backdrop-blur-md text-stone-900 hover:bg-white transition-colors opacity-0 group-hover:opacity-100 z-10"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={handleNextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white/80 backdrop-blur-md text-stone-900 hover:bg-white transition-colors opacity-0 group-hover:opacity-100 z-10"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <div className="absolute bottom-4 left-0 w-full flex justify-center gap-2 z-10">
+                {allImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex(idx);
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === currentImageIndex
+                        ? "bg-white scale-125"
+                        : "bg-white/50 hover:bg-white/80"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col">
@@ -1819,16 +1923,16 @@ export default function App() {
                 "專注於品牌識別、產品設計與視覺整合，\n透過觀察、創意與設計，將想法轉化為具溫度的作品。"}
             </p>
 
-            <div className="flex items-center gap-6 mt-8 pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 mt-8 pt-4 w-full sm:w-auto">
               <a
                 href="#works"
-                className="px-8 py-4 bg-stone-900 text-stone-50 text-xs tracking-[0.2em] uppercase font-bold hover:bg-stone-800 transition-all shadow-xl hover:-translate-y-1 block text-center"
+                className="w-full sm:w-auto px-8 py-4 bg-stone-900 text-stone-50 text-xs tracking-[0.2em] uppercase font-bold hover:bg-stone-800 transition-all shadow-xl hover:-translate-y-1 block text-center"
               >
                 Review Works
               </a>
               <a
                 href="#achievements"
-                className="px-8 py-4 bg-transparent border border-stone-300 text-stone-700 text-xs tracking-[0.2em] font-bold uppercase transition-all flex items-center justify-center gap-3 hover:bg-white hover:-translate-y-1"
+                className="w-full sm:w-auto px-8 py-4 bg-transparent border border-stone-300 text-stone-700 text-xs tracking-[0.2em] font-bold uppercase transition-all flex items-center justify-center gap-3 hover:bg-white hover:-translate-y-1"
               >
                 <Award size={16} /> Credentials
               </a>
@@ -2205,6 +2309,14 @@ export default function App() {
         <EditProjectForm
           project={editingProject}
           onClose={() => setEditingProject(null)}
+          onDelete={() => {
+            if (window.confirm("確定要刪除這個作品嗎？")) {
+              if (editingProject.id) {
+                handleDeleteProject(editingProject.id);
+                setEditingProject(null);
+              }
+            }
+          }}
         />
       )}
       {showEditProjectsOrder && (
