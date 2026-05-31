@@ -623,9 +623,9 @@ const EditProjectForm = ({
 };
 
 const DEFAULT_PROFILE = {
-  name: "王小明",
-  tagline: "品牌識別",
-  tagline2: "產品設計",
+  name: "羅婕瑀",
+  subtitle:
+    "專注於品牌識別、產品設計與視覺整合，\n透過觀察、創意與設計，將想法轉化為具溫度的作品。",
   photoUrl:
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&h=500&auto=format&fit=crop",
 };
@@ -638,9 +638,12 @@ const EditProfileModal = ({
   onClose: () => void;
 }) => {
   const [formData, setFormData] = useState({
-    name: data.name,
-    tagline: data.tagline,
-    tagline2: data.tagline2,
+    name: data.name !== "王小明" ? data.name : "羅婕瑀",
+    subtitle:
+      data.subtitle ??
+      (data.tagline
+        ? `${data.tagline} 與 ${data.tagline2}`
+        : "專注於品牌識別、產品設計與視覺整合，\n透過觀察、創意與設計，將想法轉化為具溫度的作品。"),
     photoUrl: data.photoUrl,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -685,27 +688,17 @@ const EditProfileModal = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">專注領域 1</label>
-            <input
-              type="text"
-              value={formData.tagline}
+            <label className="block text-sm font-medium mb-1">
+              副標段落介紹
+            </label>
+            <textarea
+              value={formData.subtitle}
               onChange={(e) =>
-                setFormData({ ...formData, tagline: e.target.value })
+                setFormData({ ...formData, subtitle: e.target.value })
               }
               className="w-full px-4 py-2 border rounded-xl"
-              placeholder="例如：品牌識別"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">專注領域 2</label>
-            <input
-              type="text"
-              value={formData.tagline2}
-              onChange={(e) =>
-                setFormData({ ...formData, tagline2: e.target.value })
-              }
-              className="w-full px-4 py-2 border rounded-xl"
-              placeholder="例如：產品設計"
+              placeholder="填寫簡短的自我介紹或專注領域..."
+              rows={3}
             />
           </div>
           <div>
@@ -1552,7 +1545,7 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
               onClick={() => setIsExpanded(!isExpanded)}
               className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-widest font-bold select-none outline-none"
             >
-              檢視證照圖片
+              See more
               <motion.div
                 animate={{ rotate: isExpanded ? 180 : 0 }}
                 transition={{ duration: 0.3 }}
@@ -1773,17 +1766,17 @@ export default function App() {
         <div className="absolute top-1/4 left-10 w-64 h-64 border border-stone-200 rounded-full blur-[2px] opacity-40 -z-10" />
         <div className="absolute bottom-1/4 right-10 w-96 h-96 border border-stone-300 rounded-full blur-[4px] opacity-30 -z-10" />
 
-        <div className="max-w-5xl mx-auto flex flex-col items-center text-center relative z-10 w-full">
+        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16 relative z-10 w-full text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6 mb-16 relative"
+            className="space-y-6 flex-1 w-full lg:max-w-2xl flex flex-col items-center lg:items-start"
           >
             <div className="inline-flex items-center gap-3 px-5 py-2 border border-stone-300 text-stone-600 text-xs font-mono uppercase tracking-[0.2em] mb-4 bg-white/50 backdrop-blur-sm">
               <Sparkles size={14} className="text-stone-400" /> 2026 廣告設計科
             </div>
 
-            <h1 className="text-5xl md:text-[6rem] font-serif font-black tracking-widest text-stone-900 leading-tight">
+            <h1 className="text-[2rem] sm:text-4xl md:text-[4rem] lg:text-[4.5rem] xl:text-[5rem] font-serif font-black tracking-widest text-stone-900 leading-tight whitespace-nowrap">
               <span className="block mb-2 overflow-hidden">
                 <motion.span
                   initial={{ y: "100%" }}
@@ -1795,7 +1788,7 @@ export default function App() {
                   }}
                   className="inline-block title-text"
                 >
-                  設計，是
+                  用設計看見問題，
                 </motion.span>
               </span>
               <span className="block text-stone-400 overflow-hidden">
@@ -1809,61 +1802,56 @@ export default function App() {
                   }}
                   className="inline-block relative"
                 >
-                  看見問題的藝術
+                  用美感回應生活
                   <span className="absolute -bottom-1 left-0 w-full h-[6px] bg-stone-900 opacity-20" />
                 </motion.span>
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl font-serif text-stone-600 max-w-2xl mx-auto leading-relaxed mt-10 tracking-[0.1em]">
-              你好，我是{profileData.name}。
+            <p className="text-lg md:text-xl font-serif text-stone-600 leading-relaxed mt-8 tracking-[0.1em] whitespace-pre-wrap max-w-xl">
+              你好，我是
+              {profileData.name !== "王小明" && profileData.name
+                ? profileData.name
+                : "羅婕瑀"}
+              。
               <br />
-              專注於{" "}
-              <span className="text-stone-900 font-bold border-b border-stone-400 pb-1">
-                {profileData.tagline}
-              </span>{" "}
-              與{" "}
-              <span className="text-stone-900 font-bold border-b border-stone-400 pb-1">
-                {profileData.tagline2}
-              </span>
+              {profileData.subtitle ??
+                "專注於品牌識別、產品設計與視覺整合，\n透過觀察、創意與設計，將想法轉化為具溫度的作品。"}
             </p>
+
+            <div className="flex items-center gap-6 mt-8 pt-4">
+              <a
+                href="#works"
+                className="px-8 py-4 bg-stone-900 text-stone-50 text-xs tracking-[0.2em] uppercase font-bold hover:bg-stone-800 transition-all shadow-xl hover:-translate-y-1 block text-center"
+              >
+                Review Works
+              </a>
+              <a
+                href="#achievements"
+                className="px-8 py-4 bg-transparent border border-stone-300 text-stone-700 text-xs tracking-[0.2em] font-bold uppercase transition-all flex items-center justify-center gap-3 hover:bg-white hover:-translate-y-1"
+              >
+                <Award size={16} /> Credentials
+              </a>
+            </div>
           </motion.div>
 
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="w-48 h-64 md:w-56 md:h-72 border-[8px] border-white shadow-2xl overflow-hidden relative group filter grayscale hover:grayscale-0 transition-all duration-700 z-20 rotate-3 hover:rotate-0 flex-shrink-0"
-            >
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="relative lg:mt-0 flex-shrink-0"
+          >
+            <div className="w-56 h-72 md:w-72 md:h-96 lg:w-[26rem] lg:h-[34rem] border-[12px] border-white shadow-2xl overflow-hidden relative group filter grayscale hover:grayscale-0 transition-all duration-700 z-20 rotate-3 hover:rotate-0">
               <img
                 src={getDirectImageUrl(profileData.photoUrl)}
                 alt="Profile"
                 className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-1000"
                 referrerPolicy="no-referrer"
               />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col gap-4 text-left"
-            >
-              <a
-                href="#works"
-                className="px-10 py-4 bg-stone-900 text-stone-50 text-sm tracking-[0.2em] uppercase font-bold hover:bg-stone-800 transition-all shadow-xl hover:-translate-y-1 text-center"
-              >
-                Review Works
-              </a>
-              <a
-                href="#achievements"
-                className="px-10 py-4 bg-transparent border border-stone-300 text-stone-700 text-sm tracking-[0.2em] font-bold uppercase transition-all flex items-center justify-center gap-3 hover:bg-white hover:-translate-y-1"
-              >
-                <Award size={18} /> Credentials
-              </a>
-            </motion.div>
-          </div>
+            </div>
+            {/* Minimalist ornamental border to ground the image on the right */}
+            <div className="absolute -top-6 -right-6 w-full h-full border border-stone-300 -z-10 rotate-6 hidden lg:block" />
+          </motion.div>
         </div>
       </section>
 
