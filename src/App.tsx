@@ -96,6 +96,7 @@ interface Achievement {
   description: string;
   type: "Award" | "Course" | "Certificate";
   imageUrl?: string;
+  images?: string[];
 }
 
 interface Skill {
@@ -1292,29 +1293,45 @@ const EditAchievementsModal = ({
                             className="flex-1 px-3 py-2 border rounded-lg"
                           />
                         </div>
-                        <div className="flex gap-4 text-sm font-medium pl-8">
+                        <div className="flex flex-col gap-2 pl-8">
                           <input
                             type="text"
                             value={item.imageUrl || ""}
-                            placeholder="圖片網址 (可選，支援 Google Drive 圖片連結)"
+                            placeholder="首圖網址 (可選，支援 Google Drive 圖片連結)"
                             onChange={(e) => {
                               const newItems = [...items];
                               newItems[idx].imageUrl = e.target.value;
                               setItems(newItems);
                             }}
-                            className="flex-1 px-3 py-2 border rounded-lg"
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
                           />
-                          <button
-                            onClick={() => {
-                              const newItems = items.filter(
-                                (_, i) => i !== idx,
-                              );
-                              setItems(newItems);
-                            }}
-                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold shrink-0"
-                          >
-                            刪除
-                          </button>
+                          <div className="flex gap-4 items-start">
+                            <textarea
+                              value={(item.images || []).join("\n")}
+                              placeholder="其他圖片網址 (可選，每行一個)"
+                              onChange={(e) => {
+                                const newItems = [...items];
+                                newItems[idx].images = e.target.value
+                                  .split("\n")
+                                  .map((v) => v.trim())
+                                  .filter(Boolean);
+                                setItems(newItems);
+                              }}
+                              className="flex-1 px-3 py-2 border rounded-lg text-sm resize-none"
+                              rows={2}
+                            />
+                            <button
+                              onClick={() => {
+                                const newItems = items.filter(
+                                  (_, i) => i !== idx,
+                                );
+                                setItems(newItems);
+                              }}
+                              className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-bold shrink-0 mt-1"
+                            >
+                              刪除
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1643,41 +1660,55 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
         <p className="text-stone-500 text-base leading-relaxed max-w-3xl font-serif">
           {item.description}
         </p>
-        {item.imageUrl && (
-          <div className="mt-8">
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-widest font-bold select-none outline-none"
-            >
-              See more
-              <motion.div
-                animate={{ rotate: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.3 }}
+        {(() => {
+          const allImages = [item.imageUrl, ...(item.images || [])].filter(
+            Boolean,
+          );
+          if (allImages.length === 0) return null;
+
+          return (
+            <div className="mt-8">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-widest font-bold select-none outline-none"
               >
-                <ChevronDown size={16} />
+                See more
+                <motion.div
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown size={16} />
+                </motion.div>
+              </button>
+              <motion.div
+                initial={false}
+                animate={{
+                  height: isExpanded ? "auto" : 0,
+                  opacity: isExpanded ? 1 : 0,
+                  marginTop: isExpanded ? 24 : 0,
+                }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                  {allImages.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="border border-stone-200 p-2 bg-white min-w-[280px] max-w-[400px] shrink-0 snap-center shadow-sm"
+                    >
+                      <img
+                        src={getDirectImageUrl(img)}
+                        alt={`${item.title} - ${idx + 1}`}
+                        className="w-full h-auto object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ))}
+                </div>
               </motion.div>
-            </button>
-            <motion.div
-              initial={false}
-              animate={{
-                height: isExpanded ? "auto" : 0,
-                opacity: isExpanded ? 1 : 0,
-                marginTop: isExpanded ? 24 : 0,
-              }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="overflow-hidden"
-            >
-              <div className="border border-stone-200 p-2 bg-white max-w-lg shadow-sm">
-                <img
-                  src={getDirectImageUrl(item.imageUrl)}
-                  alt={item.title}
-                  className="w-full h-auto object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </motion.div>
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
     </motion.div>
   );
