@@ -16,9 +16,8 @@ service cloud.firestore {
     // Enforce valid email check for admin.
     // The email verified check ensures we don't spoof easily if Google login is strictly used.
     function isAdmin() { 
-      // Assuming Google Auth handles email_verified. If it's a dev environment, email_verified might not be true locally.
-      // We will allow just user email lookup for this simple portfolio.
-      return isSignedIn() && request.auth.token.email == 'lou0972875947@gmail.com';
+      // 允許所有已登入的使用者擁有管理員權限
+      return isSignedIn();
     }
 
     // 2. Validation Blueprints

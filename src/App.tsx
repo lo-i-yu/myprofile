@@ -33,6 +33,8 @@ import {
   Award,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Monitor,
   Database,
   Layout,
@@ -90,6 +92,7 @@ interface Achievement {
   date: string;
   description: string;
   type: "Award" | "Course" | "Certificate";
+  imageUrl?: string;
 }
 
 interface Skill {
@@ -212,9 +215,9 @@ const SectionHeading = ({
   </motion.div>
 );
 
-const ADMIN_EMAILS = ["lou0972875947@gmail.com", "fish20080901@gmail.com"];
 const checkIsAdmin = (user: FirebaseUser | null) => {
-  return user?.email ? ADMIN_EMAILS.includes(user.email) : false;
+  // 允許所有已登入的使用者擁有管理員權限
+  return !!user;
 };
 
 const AdminLogin = ({ user }: { user: FirebaseUser | null }) => {
@@ -1144,6 +1147,7 @@ const EditAchievementsModal = ({
                     date: "",
                     description: "",
                     type: "Award",
+                    imageUrl: "",
                   },
                 ])
               }
@@ -1241,6 +1245,19 @@ const EditAchievementsModal = ({
                             onChange={(e) => {
                               const newItems = [...items];
                               newItems[idx].description = e.target.value;
+                              setItems(newItems);
+                            }}
+                            className="flex-1 px-3 py-2 border rounded-lg"
+                          />
+                        </div>
+                        <div className="flex gap-4 text-sm font-medium pl-8">
+                          <input
+                            type="text"
+                            value={item.imageUrl || ""}
+                            placeholder="圖片網址 (可選，支援 Google Drive 圖片連結)"
+                            onChange={(e) => {
+                              const newItems = [...items];
+                              newItems[idx].imageUrl = e.target.value;
                               setItems(newItems);
                             }}
                             className="flex-1 px-3 py-2 border rounded-lg"
@@ -1488,6 +1505,84 @@ const ProjectDetailsModal = ({
         </div>
       </motion.div>
     </div>
+  );
+};
+
+const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <motion.div
+      key={item.id || idx}
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="group bg-white p-8 border-b border-stone-200 hover:bg-stone-50 transition-all flex flex-col md:flex-row md:items-start gap-8 relative overflow-hidden"
+    >
+      <div className="shrink-0 pt-1">
+        <div className="w-12 h-12 border border-stone-300 flex items-center justify-center bg-white text-stone-900 group-hover:bg-stone-900 group-hover:text-white transition-colors duration-500">
+          {item.type === "Award" ? (
+            <Sparkles size={18} />
+          ) : item.type === "Course" ? (
+            <BookOpen size={18} />
+          ) : (
+            <Award size={18} />
+          )}
+        </div>
+      </div>
+      <div className="flex-1">
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <span className="px-3 py-1 bg-white border border-stone-300 text-stone-900 text-[10px] font-mono tracking-widest uppercase">
+            {item.date}
+          </span>
+          <h3 className="text-2xl font-serif font-black text-stone-900 tracking-widest group-hover:pl-2 transition-all duration-300">
+            {item.title}
+          </h3>
+        </div>
+        <p className="text-stone-600 font-mono text-xs uppercase tracking-widest mb-4 flex items-center gap-3">
+          <span className="w-8 h-[1px] bg-stone-400" />
+          {item.organization}
+        </p>
+        <p className="text-stone-500 text-base leading-relaxed max-w-3xl font-serif">
+          {item.description}
+        </p>
+        {item.imageUrl && (
+          <div className="mt-8">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors tracking-widest font-bold select-none outline-none"
+            >
+              檢視證照圖片
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ChevronDown size={16} />
+              </motion.div>
+            </button>
+            <motion.div
+              initial={false}
+              animate={{
+                height: isExpanded ? "auto" : 0,
+                opacity: isExpanded ? 1 : 0,
+                marginTop: isExpanded ? 24 : 0,
+              }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="border border-stone-200 p-2 bg-white max-w-lg shadow-sm">
+                <img
+                  src={getDirectImageUrl(item.imageUrl)}
+                  alt={item.title}
+                  className="w-full h-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 
@@ -1943,42 +2038,7 @@ export default function App() {
           )}
           <div className="grid gap-6 mt-8">
             {achievementsData.map((item: Achievement, idx: number) => (
-              <motion.div
-                key={item.id || idx}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="group bg-white p-8 border-b border-stone-200 hover:bg-stone-50 transition-all flex flex-col md:flex-row md:items-start gap-8 relative overflow-hidden"
-              >
-                <div className="shrink-0 pt-1">
-                  <div className="w-12 h-12 border border-stone-300 flex items-center justify-center bg-white text-stone-900 group-hover:bg-stone-900 group-hover:text-white transition-colors duration-500">
-                    {item.type === "Award" ? (
-                      <Sparkles size={18} />
-                    ) : item.type === "Course" ? (
-                      <BookOpen size={18} />
-                    ) : (
-                      <Award size={18} />
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-4 mb-4">
-                    <span className="px-3 py-1 bg-white border border-stone-300 text-stone-900 text-[10px] font-mono tracking-widest uppercase">
-                      {item.date}
-                    </span>
-                    <h3 className="text-2xl font-serif font-black text-stone-900 tracking-widest group-hover:pl-2 transition-all duration-300">
-                      {item.title}
-                    </h3>
-                  </div>
-                  <p className="text-stone-600 font-mono text-xs uppercase tracking-widest mb-4 flex items-center gap-3">
-                    <span className="w-8 h-[1px] bg-stone-400" />
-                    {item.organization}
-                  </p>
-                  <p className="text-stone-500 text-base leading-relaxed max-w-3xl font-serif">
-                    {item.description}
-                  </p>
-                </div>
-              </motion.div>
+              <AchievementItem key={item.id || idx} item={item} idx={idx} />
             ))}
           </div>
         </section>
