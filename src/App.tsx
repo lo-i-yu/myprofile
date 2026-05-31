@@ -1773,19 +1773,21 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                <div className="flex gap-4 overflow-x-auto pb-4 snap-x items-center">
                   {allImages.map((img, idx) => (
                     <div
                       key={idx}
-                      className="border border-stone-200 p-2 bg-white min-w-[200px] max-w-[300px] shrink-0 snap-center shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      className="border border-stone-200 p-2 bg-white w-[240px] shrink-0 snap-center shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => setPreviewIndex(idx)}
                     >
-                      <img
-                        src={getDirectImageUrl(img as string)}
-                        alt={`${item.title} - ${idx + 1}`}
-                        className="w-full h-auto object-contain max-h-[240px]"
-                        referrerPolicy="no-referrer"
-                      />
+                      <div className="w-full aspect-[4/3] relative overflow-hidden bg-stone-50">
+                        <img
+                          src={getDirectImageUrl(img as string)}
+                          alt={`${item.title} - ${idx + 1}`}
+                          className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
