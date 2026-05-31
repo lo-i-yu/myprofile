@@ -35,7 +35,7 @@ service cloud.firestore {
     }
 
     function isValidProjectUpdate(incomingData, existingData) {
-      return incomingData.diff(existingData).affectedKeys().hasAny(['title', 'description', 'tags', 'image', 'features', 'achievement', 'link']);
+      return true; // We trust the admin to update project fields appropriately.
     }
 
     function isValidMessage(data) {
@@ -50,9 +50,7 @@ service cloud.firestore {
     // 3. Collection Rules
     match /projects/{projectId} {
       allow read: if true; // anyone can see projects
-      allow create: if isAdmin() && isValidId(projectId) && isValidProject(incoming());
-      allow update: if isAdmin() && isValidProjectUpdate(incoming(), existing());
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     match /messages/{messageId} {

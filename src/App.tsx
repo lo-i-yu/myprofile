@@ -10,6 +10,7 @@ import {
   deleteDoc,
   doc,
   setDoc,
+  updateDoc,
   arrayUnion,
 } from "firebase/firestore";
 import {
@@ -40,6 +41,7 @@ import {
   Sparkles,
   X,
   GripVertical,
+  Edit2,
 } from "lucide-react";
 
 import {
@@ -427,6 +429,188 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
               className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? "新增中..." : "新增作品"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const EditProjectForm = ({
+  project,
+  onClose,
+}: {
+  project: Project;
+  onClose: () => void;
+}) => {
+  const [formData, setFormData] = useState({
+    title: project.title || "",
+    description: project.description || "",
+    image: project.image || "",
+    link: project.link || "",
+    achievement: project.achievement || "",
+    tags: (project.tags || []).join(", "),
+    features: (project.features || []).join("\n"),
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      if (!project.id) return;
+      await setDoc(
+        doc(db, "projects", project.id),
+        {
+          title: formData.title,
+          description: formData.description,
+          image: formData.image,
+          link: formData.link || "",
+          achievement: formData.achievement || "",
+          tags: formData.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          features: formData.features
+            .split("\n")
+            .map((f) => f.trim())
+            .filter(Boolean),
+          createdAt: project.createdAt || serverTimestamp(),
+        },
+        { merge: true },
+      );
+      onClose();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, "projects");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-[110] flex items-center justify-center p-6 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold">編輯作品專案</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">作品名稱</label>
+            <input
+              required
+              type="text"
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">作品簡介</label>
+            <textarea
+              required
+              rows={3}
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl resize-none"
+            ></textarea>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              標籤 (用逗號分隔)
+            </label>
+            <input
+              required
+              type="text"
+              value={formData.tags}
+              placeholder="React, TypeScript, CSS"
+              onChange={(e) =>
+                setFormData({ ...formData, tags: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              圖片網址
+              <span className="block text-xs font-normal text-slate-500 mt-0.5">
+                支援 Google 雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={formData.image}
+              onChange={(e) =>
+                setFormData({ ...formData, image: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              作品連結 (選填)
+            </label>
+            <input
+              type="text"
+              value={formData.link}
+              onChange={(e) =>
+                setFormData({ ...formData, link: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              成就/獎項 (選填)
+            </label>
+            <input
+              type="text"
+              value={formData.achievement}
+              onChange={(e) =>
+                setFormData({ ...formData, achievement: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              核心技術亮點 (每行一個)
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={formData.features}
+              onChange={(e) =>
+                setFormData({ ...formData, features: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-xl resize-none"
+            ></textarea>
+          </div>
+
+          <div className="flex gap-4 pt-4 mt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 rounded-xl border text-slate-600 hover:bg-slate-50"
+            >
+              取消
+            </button>
+            <button
+              disabled={submitting}
+              type="submit"
+              className="flex-1 px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? "儲存中..." : "儲存修改"}
             </button>
           </div>
         </form>
@@ -1321,6 +1505,7 @@ export default function App() {
   const [showEditProjectsOrder, setShowEditProjectsOrder] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const projectsScrollRef = useRef<HTMLDivElement>(null);
   const isAdmin = checkIsAdmin(user);
 
@@ -1363,7 +1548,11 @@ export default function App() {
   const deletedProjects = content?.deletedProjects || [];
   const displayProjects = [
     ...projects,
-    ...DEFAULT_PROJECTS.filter((p) => !deletedProjects.includes(p.id)),
+    ...DEFAULT_PROJECTS.filter(
+      (p) =>
+        !deletedProjects.includes(p.id) &&
+        !projects.some((fp) => fp.id === p.id),
+    ),
   ];
 
   const projectOrder = content?.projectOrder || [];
@@ -1862,12 +2051,20 @@ export default function App() {
                   className="w-[85vw] md:w-[45vw] lg:w-[350px] shrink-0 snap-center md:snap-start flex flex-col bg-white overflow-hidden shadow-xs hover:shadow-2xl transition-all duration-700 group relative border border-stone-200"
                 >
                   {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
-                    >
-                      ✕
-                    </button>
+                    <div className="absolute top-4 right-4 z-10 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setEditingProject(project)}
+                        className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white hover:bg-blue-600 shadow-md"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="w-8 h-8 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 shadow-md"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   )}
                   <div className="aspect-[14/10] relative overflow-hidden bg-stone-100">
                     <img
@@ -1955,6 +2152,12 @@ export default function App() {
 
       {showAddProject && (
         <AddProjectForm onClose={() => setShowAddProject(false)} />
+      )}
+      {editingProject && (
+        <EditProjectForm
+          project={editingProject}
+          onClose={() => setEditingProject(null)}
+        />
       )}
       {showEditProjectsOrder && (
         <EditProjectsOrderModal
