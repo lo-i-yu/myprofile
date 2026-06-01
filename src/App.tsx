@@ -2261,7 +2261,7 @@ export default function App() {
         {/* Works Section */}
         <section className="py-32 relative">
           <SectionHeading icon={Briefcase} id="works">
-            作品特色介紹 (Portfolio Showcase)
+            課程成果展示（Academic Showcase）
           </SectionHeading>
 
           {isAdmin && (
