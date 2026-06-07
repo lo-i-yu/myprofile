@@ -44,6 +44,8 @@ import {
   X,
   GripVertical,
   Edit2,
+  Camera,
+  Palette,
 } from "lucide-react";
 
 import {
@@ -102,7 +104,7 @@ interface Achievement {
 interface Skill {
   name: string;
   level: number; // 1-5
-  category: "Graphic" | "UXUI" | "Media" | "Other";
+  category: string;
 }
 
 // --- Data (Example - User should replace with their real data) ---
@@ -988,15 +990,18 @@ const EditSkillsModal = ({
   data: Skill[];
   onClose: () => void;
 }) => {
-  const [items, setItems] = useState<Skill[]>(data);
+  const [items, setItems] = useState<(Skill & { _id: string })[]>(() =>
+    data.map((item) => ({ ...item, _id: crypto.randomUUID() })),
+  );
   const [submitting, setSubmitting] = useState(false);
 
   const handleSave = async () => {
     setSubmitting(true);
     try {
+      const skillsToSave = items.map(({ _id, ...rest }) => rest);
       await setDoc(
         doc(db, "portfolio_data", "main"),
-        { skills: items },
+        { skills: skillsToSave },
         { merge: true },
       );
       onClose();
@@ -1024,7 +1029,12 @@ const EditSkillsModal = ({
               onClick={() =>
                 setItems([
                   ...items,
-                  { name: "", level: 3, category: "Graphic" },
+                  {
+                    name: "",
+                    level: 3,
+                    category: "Graphic",
+                    _id: crypto.randomUUID(),
+                  },
                 ])
               }
               className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg text-sm font-bold"
@@ -1048,11 +1058,7 @@ const EditSkillsModal = ({
                 className="space-y-4 overflow-y-auto flex-1 pr-2"
               >
                 {items.map((item, idx) => (
-                  <Draggable
-                    key={item.name + idx}
-                    draggableId={`skill-${idx}`}
-                    index={idx}
-                  >
+                  <Draggable key={item._id} draggableId={item._id} index={idx}>
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
@@ -1088,20 +1094,17 @@ const EditSkillsModal = ({
                           }}
                           className="w-20 px-3 py-2 border rounded-lg"
                         />
-                        <select
+                        <input
+                          type="text"
                           value={item.category}
+                          placeholder="分類名稱"
                           onChange={(e) => {
                             const newItems = [...items];
-                            newItems[idx].category = e.target.value as any;
+                            newItems[idx].category = e.target.value;
                             setItems(newItems);
                           }}
                           className="w-32 px-3 py-2 border rounded-lg bg-white"
-                        >
-                          <option value="Graphic">平面設計</option>
-                          <option value="UXUI">UI/UX</option>
-                          <option value="Media">影音剪輯</option>
-                          <option value="Other">其他</option>
-                        </select>
+                        />
                         <button
                           onClick={() => {
                             const newItems = items.filter((_, i) => i !== idx);
@@ -1602,7 +1605,7 @@ const ProjectDetailsModal = ({
             <img
               src={getDirectImageUrl(allImages[currentImageIndex])}
               alt={`${project.title} - ${currentImageIndex + 1}`}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
               referrerPolicy="no-referrer"
             />
           )}
@@ -1680,7 +1683,13 @@ const ProjectDetailsModal = ({
             </div>
           )}
 
-          <div className="mt-auto pt-8 flex flex-col sm:flex-row gap-4 items-center w-full">
+          <div className="mt-auto flex flex-col gap-6 w-full pt-8">
+            {project.achievement && (
+              <div className="flex items-start gap-4 p-4 bg-stone-50 border border-stone-100 text-stone-600 text-sm font-serif">
+                <Award size={18} className="text-stone-400 shrink-0 mt-0.5" />
+                <span>{project.achievement}</span>
+              </div>
+            )}
             {project.link && project.link !== "#" ? (
               <a
                 href={project.link}
@@ -1691,12 +1700,6 @@ const ProjectDetailsModal = ({
                 前往專案 <ExternalLink size={16} />
               </a>
             ) : null}
-            {project.achievement && (
-              <div className="flex items-center gap-3 w-full py-4 text-stone-500 font-mono text-xs uppercase tracking-widest">
-                <Award size={16} className="text-stone-400" />
-                {project.achievement}
-              </div>
-            )}
           </div>
         </div>
       </motion.div>
@@ -2138,8 +2141,8 @@ export default function App() {
             >
               {[
                 { icon: Layout, label: "平面設計" },
-                { icon: Monitor, label: "UI/UX" },
-                { icon: Terminal, label: "影音剪輯" },
+                { icon: Palette, label: "電腦繪圖" },
+                { icon: Camera, label: "拍照攝影" },
                 { icon: Sparkles, label: "視覺藝術" },
               ].map((item, idx) => (
                 <div
@@ -2176,63 +2179,83 @@ export default function App() {
             </div>
           )}
           <div className="grid md:grid-cols-3 gap-10 mt-8">
-            {[
-              { cat: "Graphic", title: "平面與視覺設計", icon: Layout },
-              { cat: "UXUI", title: "UI/UX 與數位產品", icon: Monitor },
-              { cat: "Media", title: "影音剪輯與其他", icon: Terminal },
-            ].map((category) => (
-              <motion.div
-                key={category.cat}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="bg-white p-10 border border-stone-200 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden group hover:-translate-y-2"
-              >
-                <div className="absolute top-0 right-0 p-4 text-stone-100 group-hover:text-stone-200 transition-colors -z-0">
-                  <category.icon
-                    size={160}
-                    strokeWidth={0.5}
-                    className="-rotate-12 transform group-hover:rotate-0 transition-transform duration-700"
-                  />
-                </div>
-                <h3 className="text-2xl font-serif font-black mb-10 text-stone-900 relative z-10 tracking-widest uppercase">
-                  {category.title}
-                </h3>
-                <div className="space-y-8 relative z-10">
-                  {skillsData
-                    .filter(
-                      (s: Skill) =>
-                        s.category === category.cat ||
-                        (category.cat === "Media" && s.category === "Other"),
-                    )
-                    .map((skill: Skill) => (
-                      <div key={skill.name} className="group/skill">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm font-bold text-stone-700 tracking-widest uppercase">
-                            {skill.name}
-                          </span>
-                          <span className="text-xs font-mono text-stone-400">
-                            {skill.level}/5
-                          </span>
-                        </div>
-                        <div className="h-[2px] w-full bg-stone-100 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            whileInView={{
-                              width: `${(skill.level / 5) * 100}%`,
-                            }}
-                            transition={{
-                              duration: 1.2,
-                              ease: [0.23, 1, 0.32, 1],
-                            }}
-                            className="h-full bg-stone-900"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </motion.div>
-            ))}
+            {Array.from(new Set(skillsData.map((s: Skill) => s.category))).map(
+              (catName, idx) => {
+                const getIcon = (name: string, index: number) => {
+                  const lower = name.toLowerCase();
+                  if (
+                    lower.includes("graphic") ||
+                    lower.includes("平面") ||
+                    lower.includes("視覺")
+                  )
+                    return Layout;
+                  if (
+                    lower.includes("ui") ||
+                    lower.includes("ux") ||
+                    lower.includes("數位")
+                  )
+                    return Monitor;
+                  if (
+                    lower.includes("media") ||
+                    lower.includes("影音") ||
+                    lower.includes("剪輯")
+                  )
+                    return Terminal;
+                  const icons = [Code, Sparkles, BookOpen, Award, Briefcase];
+                  return icons[index % icons.length];
+                };
+                const IconComponent = getIcon(catName, idx);
+                return (
+                  <motion.div
+                    key={catName}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-white p-10 border border-stone-200 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden group hover:-translate-y-2"
+                  >
+                    <div className="absolute top-0 right-0 p-4 text-stone-100 group-hover:text-stone-200 transition-colors -z-0">
+                      <IconComponent
+                        size={160}
+                        strokeWidth={0.5}
+                        className="-rotate-12 transform group-hover:rotate-0 transition-transform duration-700"
+                      />
+                    </div>
+                    <h3 className="text-2xl font-serif font-black mb-10 text-stone-900 relative z-10 tracking-widest uppercase">
+                      {catName || "未分類"}
+                    </h3>
+                    <div className="space-y-8 relative z-10">
+                      {skillsData
+                        .filter((s: Skill) => s.category === catName)
+                        .map((skill: Skill) => (
+                          <div key={skill.name} className="group/skill">
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-bold text-stone-700 tracking-widest uppercase">
+                                {skill.name}
+                              </span>
+                              <span className="text-xs font-mono text-stone-400">
+                                {skill.level}/5
+                              </span>
+                            </div>
+                            <div className="h-[2px] w-full bg-stone-100 overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                whileInView={{
+                                  width: `${(skill.level / 5) * 100}%`,
+                                }}
+                                transition={{
+                                  duration: 1.2,
+                                  ease: [0.23, 1, 0.32, 1],
+                                }}
+                                className="h-full bg-stone-900"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </motion.div>
+                );
+              },
+            )}
           </div>
         </section>
 
@@ -2341,11 +2364,11 @@ export default function App() {
                       </button>
                     </div>
                   )}
-                  <div className="aspect-[14/10] relative overflow-hidden bg-stone-100">
+                  <div className="aspect-[14/10] relative overflow-hidden bg-stone-100 flex items-center justify-center p-4">
                     <img
                       src={getDirectImageUrl(project.image)}
                       alt={project.title}
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 filter grayscale-[50%] hover:grayscale-0"
+                      className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105 filter grayscale-[50%] hover:grayscale-0"
                       referrerPolicy="no-referrer"
                     />
                   </div>
