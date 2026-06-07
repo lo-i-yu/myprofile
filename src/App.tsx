@@ -75,6 +75,117 @@ const getDirectImageUrl = (url: string) => {
   return url;
 };
 
+const isVideoUrl = (url: string) => {
+  if (!url) return false;
+  const lowercaseUrl = url.toLowerCase();
+  return (
+    lowercaseUrl.endsWith(".mp4") ||
+    lowercaseUrl.endsWith(".webm") ||
+    lowercaseUrl.endsWith(".ogg") ||
+    lowercaseUrl.includes("youtube.com/") ||
+    lowercaseUrl.includes("youtu.be/")
+  );
+};
+
+const MediaRenderer = ({ url, alt, className, controls, ...props }: any) => {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [url]);
+
+  if (!url) return null;
+  const isYoutube = url.includes("youtube.com/") || url.includes("youtu.be/");
+  const isGoogleDrive = url.includes("drive.google.com");
+
+  if (isYoutube) {
+    let videoId = "";
+    if (url.includes("youtube.com/watch")) {
+      try {
+        videoId = new URL(url).searchParams.get("v") || "";
+      } catch (e) {}
+    } else if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1].split("?")[0];
+    }
+    if (videoId) {
+      return (
+        <div className="relative w-full h-full">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=${controls ? "1" : "0"}&mute=${controls ? "0" : "1"}&loop=1&playlist=${videoId}&modestbranding=1&rel=0&showinfo=0`}
+            className={`w-full h-full ${className}`}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            {...props}
+          />
+          {/* Overlay top bar to prevent clicking share/watch later links */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-transparent z-10 pointer-events-auto" />
+        </div>
+      );
+    }
+  }
+
+  if (isGoogleDrive && controls) {
+    let driveId = "";
+    const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileMatch) driveId = fileMatch[1];
+    else {
+      const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
+      if (idMatch) driveId = idMatch[1];
+    }
+
+    if (driveId) {
+      return (
+        <div className="relative w-full h-full group/drive bg-black">
+          <iframe
+            src={`https://drive.google.com/file/d/${driveId}/preview?rm=minimal`}
+            className={`w-full h-full ${className}`}
+            allow="autoplay"
+            allowFullScreen
+            {...props}
+          />
+          {/* Overlay to block clicking the top right pop-out button and hide it visually */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-black z-10 pointer-events-auto" />
+        </div>
+      );
+    }
+  }
+
+  const isHtmlVideo =
+    url.toLowerCase().endsWith(".mp4") ||
+    url.toLowerCase().endsWith(".webm") ||
+    url.toLowerCase().endsWith(".ogg") ||
+    imgError;
+
+  if (isHtmlVideo) {
+    return (
+      <video
+        src={isGoogleDrive ? url : getDirectImageUrl(url)}
+        className={className}
+        autoPlay={controls ? true : true}
+        controls={controls}
+        muted={!controls}
+        loop
+        playsInline
+        onError={() => setImgError(true)}
+        {...props}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={getDirectImageUrl(url)}
+      alt={alt}
+      className={className}
+      referrerPolicy="no-referrer"
+      onError={() => {
+        setImgError(true);
+      }}
+      {...props}
+    />
+  );
+};
+
 // --- Types ---
 interface Project {
   id: string;
@@ -374,9 +485,10 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              圖片網址
+              圖片或影片網址
               <span className="block text-xs font-normal text-slate-500 mt-0.5">
-                支援 Google 雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
+                支援圖片、影片檔 (.mp4) 或 YouTube 連結，也可使用 Google
+                雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
               </span>
             </label>
             <input
@@ -390,7 +502,7 @@ const AddProjectForm = ({ onClose }: { onClose: () => void }) => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              其他圖片網址 (選填，每行一個)
+              其他多媒體網址 (圖片或影片，選填，每行一個)
             </label>
             <textarea
               rows={3}
@@ -576,9 +688,10 @@ const EditProjectForm = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              首圖網址
+              首圖或影片網址
               <span className="block text-xs font-normal text-slate-500 mt-0.5">
-                支援 Google 雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
+                支援圖片、影片檔 (.mp4) 或 YouTube 連結，也可使用 Google
+                雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
               </span>
             </label>
             <input
@@ -592,7 +705,7 @@ const EditProjectForm = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              其他圖片網址 (選填，每行一個)
+              其他多媒體網址 (圖片或影片，選填，每行一個)
             </label>
             <textarea
               rows={3}
@@ -755,9 +868,10 @@ const EditProfileModal = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              照片圖片網址 (URL)
+              個人照片或影片網址 (URL)
               <span className="block text-xs font-normal text-slate-500 mt-0.5">
-                支援 Google 雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
+                支援圖片、影片檔 (.mp4) 或 YouTube 連結，也可使用 Google
+                雲端硬碟連結 (需設為「知道連結的使用者皆可查看」)
               </span>
             </label>
             <input
@@ -1300,7 +1414,7 @@ const EditAchievementsModal = ({
                           <input
                             type="text"
                             value={item.imageUrl || ""}
-                            placeholder="首圖網址 (可選，支援 Google Drive 圖片連結)"
+                            placeholder="首圖或影片網址 (可選，支援 YouTube、MP4 與 Google 雲端硬碟連結)"
                             onChange={(e) => {
                               const newItems = [...items];
                               newItems[idx].imageUrl = e.target.value;
@@ -1311,7 +1425,7 @@ const EditAchievementsModal = ({
                           <div className="flex gap-4 items-start">
                             <textarea
                               value={(item.images || []).join("\n")}
-                              placeholder="其他圖片網址 (可選，每行一個)"
+                              placeholder="其他多媒體網址 (圖片/影片，可選，每行一個)"
                               onChange={(e) => {
                                 const newItems = [...items];
                                 newItems[idx].images = e.target.value
@@ -1433,10 +1547,9 @@ const EditProjectsOrderModal = ({
                         >
                           <GripVertical size={20} />
                         </div>
-                        <img
-                          src={getDirectImageUrl(item.image)}
+                        <MediaRenderer
+                          url={item.image}
                           className="w-16 h-12 object-cover rounded-md"
-                          referrerPolicy="no-referrer"
                         />
                         <span className="font-bold flex-1 truncate">
                           {item.title}
@@ -1507,11 +1620,11 @@ const ImagePreviewModal = ({
         className="w-full max-w-6xl h-full flex items-center justify-center relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={getDirectImageUrl(images[currentIndex])}
+        <MediaRenderer
+          url={images[currentIndex]}
           alt={`Preview ${currentIndex + 1}`}
           className="max-w-full max-h-full object-contain"
-          referrerPolicy="no-referrer"
+          controls={true}
         />
 
         {images.length > 1 && (
@@ -1602,11 +1715,11 @@ const ProjectDetailsModal = ({
 
         <div className="md:w-1/2 min-h-[300px] md:min-h-full relative bg-stone-100 flex-shrink-0 group">
           {allImages.length > 0 && (
-            <img
-              src={getDirectImageUrl(allImages[currentImageIndex])}
+            <MediaRenderer
+              url={allImages[currentImageIndex]}
               alt={`${project.title} - ${currentImageIndex + 1}`}
               className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
-              referrerPolicy="no-referrer"
+              controls={true}
             />
           )}
 
@@ -1783,11 +1896,10 @@ const AchievementItem = ({ item, idx }: { item: Achievement; idx: number }) => {
                       className="border border-stone-200 p-2 bg-white h-[200px] sm:h-[240px] shrink-0 snap-center shadow-sm hover:shadow-md transition-all group relative cursor-pointer flex items-center justify-center overflow-hidden"
                       onClick={() => setPreviewIndex(idx)}
                     >
-                      <img
-                        src={getDirectImageUrl(img as string)}
+                      <MediaRenderer
+                        url={img as string}
                         alt={`${item.title} - ${idx + 1}`}
                         className="h-full w-auto max-w-[80vw] object-contain transition-transform duration-500 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-stone-900/0 group-hover:bg-stone-900/5 transition-colors pointer-events-none" />
                     </div>
@@ -2072,11 +2184,10 @@ export default function App() {
             className="relative lg:mt-0 flex-shrink-0"
           >
             <div className="w-56 h-72 md:w-72 md:h-96 lg:w-[26rem] lg:h-[34rem] border-[12px] border-white shadow-2xl overflow-hidden relative group transition-all duration-700 z-20 rotate-3 hover:rotate-0">
-              <img
-                src={getDirectImageUrl(profileData.photoUrl)}
+              <MediaRenderer
+                url={profileData.photoUrl}
                 alt="Profile"
                 className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-1000"
-                referrerPolicy="no-referrer"
               />
             </div>
             {/* Minimalist ornamental border to ground the image on the right */}
@@ -2364,12 +2475,11 @@ export default function App() {
                       </button>
                     </div>
                   )}
-                  <div className="aspect-[14/10] relative overflow-hidden bg-stone-100 flex items-center justify-center p-4">
-                    <img
-                      src={getDirectImageUrl(project.image)}
+                  <div className="aspect-[14/10] relative overflow-hidden bg-stone-100 flex items-center justify-center">
+                    <MediaRenderer
+                      url={project.image}
                       alt={project.title}
                       className="w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105 filter grayscale-[50%] hover:grayscale-0"
-                      referrerPolicy="no-referrer"
                     />
                   </div>
 
