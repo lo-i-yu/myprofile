@@ -109,43 +109,14 @@ const MediaRenderer = ({ url, alt, className, controls, ...props }: any) => {
     }
     if (videoId) {
       return (
-        <div className="relative w-full h-full">
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=${controls ? "1" : "0"}&mute=${controls ? "0" : "1"}&loop=1&playlist=${videoId}&modestbranding=1&rel=0&showinfo=0`}
-            className={`w-full h-full ${className}`}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            {...props}
-          />
-          {/* Overlay top bar to prevent clicking share/watch later links */}
-          <div className="absolute top-0 left-0 right-0 h-16 bg-transparent z-10 pointer-events-auto" />
-        </div>
-      );
-    }
-  }
-
-  if (isGoogleDrive && controls) {
-    let driveId = "";
-    const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileMatch) driveId = fileMatch[1];
-    else {
-      const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/);
-      if (idMatch) driveId = idMatch[1];
-    }
-
-    if (driveId) {
-      return (
-        <div className="relative w-full h-full group/drive bg-black">
-          <iframe
-            src={`https://drive.google.com/file/d/${driveId}/preview?rm=minimal`}
-            className={`w-full h-full ${className}`}
-            allow="autoplay"
-            allowFullScreen
-            {...props}
-          />
-          {/* Overlay to block clicking the top right pop-out button and hide it visually */}
-          <div className="absolute top-0 right-0 w-16 h-16 bg-black z-10 pointer-events-auto" />
-        </div>
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=${controls ? "1" : "0"}&mute=${controls ? "0" : "1"}&loop=1&playlist=${videoId}&modestbranding=1&rel=0&showinfo=0`}
+          className={className}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          style={{ border: 0 }}
+          {...props}
+        />
       );
     }
   }
@@ -154,14 +125,14 @@ const MediaRenderer = ({ url, alt, className, controls, ...props }: any) => {
     url.toLowerCase().endsWith(".mp4") ||
     url.toLowerCase().endsWith(".webm") ||
     url.toLowerCase().endsWith(".ogg") ||
-    imgError;
+    (!isGoogleDrive && imgError);
 
   if (isHtmlVideo) {
     return (
       <video
         src={isGoogleDrive ? url : getDirectImageUrl(url)}
         className={className}
-        autoPlay={controls ? true : true}
+        autoPlay={controls}
         controls={controls}
         muted={!controls}
         loop
@@ -1611,7 +1582,7 @@ const ImagePreviewModal = ({
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors z-10"
+        className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors z-50"
       >
         <X size={24} />
       </button>
@@ -1699,20 +1670,20 @@ const ProjectDetailsModal = ({
       className="fixed inset-0 bg-stone-900/80 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
       onClick={onClose}
     >
+      <button
+        onClick={onClose}
+        className="fixed top-4 right-4 md:top-8 md:right-8 z-[110] w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-stone-900/40 backdrop-blur-md hover:bg-stone-900/60 shadow-lg transition-colors rounded-full"
+      >
+        <X size={24} className="text-white" />
+      </button>
+
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white max-w-5xl w-full max-h-[90vh] overflow-y-auto rounded-none shadow-2xl relative flex flex-col md:flex-row"
+        className="bg-white max-w-5xl w-full max-h-[90vh] overflow-y-auto rounded-none shadow-2xl relative flex flex-col md:flex-row mt-12 md:mt-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center bg-white/80 backdrop-blur-md hover:bg-white transition-colors"
-        >
-          <X size={24} className="text-stone-900" />
-        </button>
-
         <div className="md:w-1/2 min-h-[300px] md:min-h-full relative bg-stone-100 flex-shrink-0 group">
           {allImages.length > 0 && (
             <MediaRenderer
